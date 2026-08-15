@@ -11,8 +11,17 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   children,
 }) => {
   return (
-    <div className="min-h-screen w-full bg-slate-900 flex justify-center overflow-x-hidden">
-      <main className="w-full max-w-[430px] min-h-screen bg-slate-900 overflow-x-hidden">
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-900">
+      <main
+        className="
+          mx-auto
+          min-h-screen
+          w-full
+          max-w-[430px]
+          overflow-x-hidden
+          bg-slate-900
+        "
+      >
         {children}
       </main>
     </div>
