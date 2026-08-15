@@ -1,3 +1,5 @@
+// App.tsx - Complete full screen version
+
 import React, { useState, useEffect } from 'react';
 import { Project, ProjectFile, ProjectSettings, ScreenView } from './types';
 import { loadProjects, saveProjects } from './utils/storage';
@@ -17,6 +19,49 @@ import {
   SearchProjectModal,
   ProjectActionsModal,
 } from './components/ImportExportModal';
+
+// CSS for full screen - global styles
+const GlobalStyles = () => (
+  <style>{`
+    /* Full screen reset */
+    html, body, #root {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      background: #0f172a !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+    }
+    
+    /* Prevent zoom on mobile */
+    * {
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    /* Prevent selection */
+    ::selection {
+      background: transparent;
+    }
+    
+    /* Hide scrollbars but keep scroll */
+    ::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      background: transparent;
+    }
+    
+    /* For Firefox */
+    * {
+      scrollbar-width: none;
+    }
+  `}</style>
+);
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -42,6 +87,12 @@ export default function App() {
   useEffect(() => {
     const loaded = loadProjects();
     setProjects(loaded);
+    
+    // Full screen request on load
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch(() => {});
+    }
   }, []);
 
   // Sync projects to storage
@@ -93,14 +144,14 @@ export default function App() {
         phpServerPort: 8000 + Math.floor(Math.random() * 500),
         splashPage: 'splash.html',
         moreOptions: {
-          fullscreenMode: false,
-          hideTitleBar: false,
-          allowLongPress: true,
-          showLoadingUI: true,
-          allowZoom: true,
+          fullscreenMode: true,  // Default fullscreen ON
+          hideTitleBar: true,   // Hide title bar
+          allowLongPress: false,
+          showLoadingUI: false,
+          allowZoom: false,     // Zoom off
           pcMode: false,
           allowMediaAutoplay: true,
-          allowSwipingToRefresh: true,
+          allowSwipingToRefresh: false,
           allowUsingCamera: true,
           allowUsingMicrophone: true,
         },
@@ -117,7 +168,7 @@ export default function App() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>${name}</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -140,7 +191,7 @@ export default function App() {
           path: 'style.css',
           size: 400,
           lastModified: new Date().toISOString().replace('T', ' ').slice(0, 19),
-          content: `body {\n  margin: 0;\n  background: #f8fafc;\n  color: #0f172a;\n}`,
+          content: `* { margin: 0; padding: 0; box-sizing: border-box; }\nhtml, body { width: 100%; height: 100%; overflow: hidden; }\nbody { margin: 0; background: #f8fafc; color: #0f172a; font-family: sans-serif; }`,
         },
         {
           id: 'file-' + Date.now() + '-3',
@@ -303,14 +354,14 @@ export default function App() {
         phpServerPort: 8000,
         splashPage: 'splash.html',
         moreOptions: {
-          fullscreenMode: false,
-          hideTitleBar: false,
-          allowLongPress: true,
-          showLoadingUI: true,
-          allowZoom: true,
+          fullscreenMode: true,
+          hideTitleBar: true,
+          allowLongPress: false,
+          showLoadingUI: false,
+          allowZoom: false,
           pcMode: false,
           allowMediaAutoplay: true,
-          allowSwipingToRefresh: true,
+          allowSwipingToRefresh: false,
           allowUsingCamera: true,
           allowUsingMicrophone: true,
         },
@@ -333,216 +384,227 @@ export default function App() {
   };
 
   return (
-    <AndroidFrame
-      onHomePress={handleHomePress}
-      onBackPress={handleBack}
-      isLandscape={currentProject?.settings.screenRotation === 'Landscape'}
-    >
-      {/* View 1: Home / Projects Screen */}
-      {currentView === 'home' && (
-        <HomeScreen
-          projects={projects}
-          onSelectProject={handleSelectProject}
-          onCreateProjectClick={() => setShowCreateModal(true)}
-          onProjectActionsClick={(proj) => {
-            setSelectedActionProject(proj);
-            setShowActionsModal(true);
-          }}
-          onOpenSettings={() => {
-            if (currentProject) navigateTo('project_settings');
-          }}
-          activeTab={homeTab}
-          onTabChange={setHomeTab}
-        />
-      )}
-
-      {/* View 2: Project Files Screen */}
-      {currentView === 'project_files' && currentProject && (
-        <ProjectFileScreen
-          project={currentProject}
-          onBack={handleBack}
-          onOpenFile={handleOpenFile}
-          onOpenPhpServer={() => navigateTo('php_server')}
-          onOpenPublish={() => setShowPublishModal(true)}
-          onOpenSearch={() => setShowSearchModal(true)}
-          onOpenSettings={() => navigateTo('project_settings')}
-          onOpenInfo={() => setShowInfoModal(true)}
-          onOpenActions={() => {
-            setSelectedActionProject(currentProject);
-            setShowActionsModal(true);
-          }}
-          onCreateFile={handleCreateFileInProject}
-          onDeleteFile={handleDeleteFile}
-          onRenameFile={handleRenameFile}
-          onRunProject={() => navigateTo('preview')}
-        />
-      )}
-
-      {/* View 3: Code Editor Screen */}
-      {currentView === 'editor' && currentFile && (
-        <CodeEditor
-          file={currentFile}
-          onBack={handleBack}
-          onSave={handleSaveFileContent}
-          onRun={() => navigateTo('preview')}
-        />
-      )}
-
-      {/* View 4: Run / Preview Screen */}
-      {currentView === 'preview' && currentProject && (
-        <RunPreviewScreen
-          project={currentProject}
-          onBack={handleBack}
-          onOpenSettings={() => navigateTo('project_settings')}
-        />
-      )}
-
-      {/* View 5: PHP Server Screen */}
-      {currentView === 'php_server' && currentProject && (
-        <PhpServerScreen
-          project={currentProject}
-          onBack={handleBack}
-          onUpdateSettings={handleUpdateSettings}
-        />
-      )}
-
-      {/* View 6: Project Settings Screen */}
-      {currentView === 'project_settings' && currentProject && (
-        <ProjectSettingsScreen
-          project={currentProject}
-          onBack={handleBack}
-          onSave={handleUpdateSettings}
-          onOpenMoreOptions={() => navigateTo('more_options')}
-        />
-      )}
-
-      {/* View 7: More Options Screen */}
-      {currentView === 'more_options' && currentProject && (
-        <MoreOptionsScreen
-          settings={currentProject.settings}
-          onBack={handleBack}
-          onSave={(newMoreOptions) =>
-            handleUpdateSettings({
-              ...currentProject.settings,
-              moreOptions: newMoreOptions,
-            })
-          }
-        />
-      )}
-
-      {/* MODALS */}
-      {/* Create Project Modal (Screen 2) */}
-      {showCreateModal && (
-        <CreateProjectDialog
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateProject}
-          onImportClick={() => {
-            setShowCreateModal(false);
-            setShowImportModal(true);
-          }}
-        />
-      )}
-
-      {/* Publish & APK Build Modal (Screens 11, 12, 13, 14, 15) */}
-      {showPublishModal && currentProject && (
-        <PublishModal
-          project={currentProject}
-          onClose={() => setShowPublishModal(false)}
-        />
-      )}
-
-      {/* Import Modal (Screen 16) */}
-      {showImportModal && (
-        <ImportModal
-          onClose={() => setShowImportModal(false)}
-          onImport={handleImportProject}
-        />
-      )}
-
-      {/* Export Modal (Screen 17) */}
-      {showExportModal && currentProject && (
-        <ExportModal
-          project={currentProject}
-          onClose={() => setShowExportModal(false)}
-        />
-      )}
-
-      {/* Project Info Modal (Screen 18) */}
-      {showInfoModal && currentProject && (
-        <ProjectInfoModal
-          project={currentProject}
-          onClose={() => setShowInfoModal(false)}
-        />
-      )}
-
-      {/* Search in Project Modal (Screen 19) */}
-      {showSearchModal && currentProject && (
-        <SearchProjectModal
-          project={currentProject}
-          onClose={() => setShowSearchModal(false)}
-          onOpenFile={handleOpenFile}
-        />
-      )}
-
-      {/* Project Actions Context Modal (Screen 20) */}
-      {showActionsModal && selectedActionProject && (
-        <ProjectActionsModal
-          project={selectedActionProject}
-          onClose={() => setShowActionsModal(false)}
-          onOpen={() => {
-            setActiveProjectId(selectedActionProject.id);
-            navigateTo('project_files');
-          }}
-          onRename={() => {
-            setRenameProjectName(selectedActionProject.name);
-            setShowRenameModal(true);
-          }}
-          onDuplicate={() => handleDuplicateProject(selectedActionProject)}
-          onDelete={() => handleDeleteProject(selectedActionProject)}
-          onSettings={() => {
-            setActiveProjectId(selectedActionProject.id);
-            navigateTo('project_settings');
-          }}
-          onInfo={() => {
-            setActiveProjectId(selectedActionProject.id);
-            setShowInfoModal(true);
-          }}
-          onShare={() => {
-            setActiveProjectId(selectedActionProject.id);
-            setShowPublishModal(true);
-          }}
-        />
-      )}
-
-      {/* Rename Project Dialog */}
-      {showRenameModal && selectedActionProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl space-y-3">
-            <h3 className="text-sm font-bold text-white">Rename Project</h3>
-            <input
-              type="text"
-              autoFocus
-              value={renameProjectName}
-              onChange={(e) => setRenameProjectName(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+    <>
+      <GlobalStyles />
+      <AndroidFrame
+        onHomePress={handleHomePress}
+        onBackPress={handleBack}
+        isLandscape={currentProject?.settings.screenRotation === 'Landscape'}
+      >
+        <div style={{ 
+          width: '100%', 
+          height: '100%', 
+          overflow: 'auto',
+          backgroundColor: '#0f172a',
+          position: 'relative',
+        }}>
+          {/* View 1: Home / Projects Screen */}
+          {currentView === 'home' && (
+            <HomeScreen
+              projects={projects}
+              onSelectProject={handleSelectProject}
+              onCreateProjectClick={() => setShowCreateModal(true)}
+              onProjectActionsClick={(proj) => {
+                setSelectedActionProject(proj);
+                setShowActionsModal(true);
+              }}
+              onOpenSettings={() => {
+                if (currentProject) navigateTo('project_settings');
+              }}
+              activeTab={homeTab}
+              onTabChange={setHomeTab}
             />
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                onClick={() => setShowRenameModal(false)}
-                className="text-xs text-slate-400 hover:text-white px-3 py-1.5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRenameProjectSubmit}
-                className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl"
-              >
-                Save
-              </button>
+          )}
+
+          {/* View 2: Project Files Screen */}
+          {currentView === 'project_files' && currentProject && (
+            <ProjectFileScreen
+              project={currentProject}
+              onBack={handleBack}
+              onOpenFile={handleOpenFile}
+              onOpenPhpServer={() => navigateTo('php_server')}
+              onOpenPublish={() => setShowPublishModal(true)}
+              onOpenSearch={() => setShowSearchModal(true)}
+              onOpenSettings={() => navigateTo('project_settings')}
+              onOpenInfo={() => setShowInfoModal(true)}
+              onOpenActions={() => {
+                setSelectedActionProject(currentProject);
+                setShowActionsModal(true);
+              }}
+              onCreateFile={handleCreateFileInProject}
+              onDeleteFile={handleDeleteFile}
+              onRenameFile={handleRenameFile}
+              onRunProject={() => navigateTo('preview')}
+            />
+          )}
+
+          {/* View 3: Code Editor Screen */}
+          {currentView === 'editor' && currentFile && (
+            <CodeEditor
+              file={currentFile}
+              onBack={handleBack}
+              onSave={handleSaveFileContent}
+              onRun={() => navigateTo('preview')}
+            />
+          )}
+
+          {/* View 4: Run / Preview Screen */}
+          {currentView === 'preview' && currentProject && (
+            <RunPreviewScreen
+              project={currentProject}
+              onBack={handleBack}
+              onOpenSettings={() => navigateTo('project_settings')}
+            />
+          )}
+
+          {/* View 5: PHP Server Screen */}
+          {currentView === 'php_server' && currentProject && (
+            <PhpServerScreen
+              project={currentProject}
+              onBack={handleBack}
+              onUpdateSettings={handleUpdateSettings}
+            />
+          )}
+
+          {/* View 6: Project Settings Screen */}
+          {currentView === 'project_settings' && currentProject && (
+            <ProjectSettingsScreen
+              project={currentProject}
+              onBack={handleBack}
+              onSave={handleUpdateSettings}
+              onOpenMoreOptions={() => navigateTo('more_options')}
+            />
+          )}
+
+          {/* View 7: More Options Screen */}
+          {currentView === 'more_options' && currentProject && (
+            <MoreOptionsScreen
+              settings={currentProject.settings}
+              onBack={handleBack}
+              onSave={(newMoreOptions) =>
+                handleUpdateSettings({
+                  ...currentProject.settings,
+                  moreOptions: newMoreOptions,
+                })
+              }
+            />
+          )}
+
+          {/* MODALS */}
+          {/* Create Project Modal */}
+          {showCreateModal && (
+            <CreateProjectDialog
+              onClose={() => setShowCreateModal(false)}
+              onCreate={handleCreateProject}
+              onImportClick={() => {
+                setShowCreateModal(false);
+                setShowImportModal(true);
+              }}
+            />
+          )}
+
+          {/* Publish & APK Build Modal */}
+          {showPublishModal && currentProject && (
+            <PublishModal
+              project={currentProject}
+              onClose={() => setShowPublishModal(false)}
+            />
+          )}
+
+          {/* Import Modal */}
+          {showImportModal && (
+            <ImportModal
+              onClose={() => setShowImportModal(false)}
+              onImport={handleImportProject}
+            />
+          )}
+
+          {/* Export Modal */}
+          {showExportModal && currentProject && (
+            <ExportModal
+              project={currentProject}
+              onClose={() => setShowExportModal(false)}
+            />
+          )}
+
+          {/* Project Info Modal */}
+          {showInfoModal && currentProject && (
+            <ProjectInfoModal
+              project={currentProject}
+              onClose={() => setShowInfoModal(false)}
+            />
+          )}
+
+          {/* Search in Project Modal */}
+          {showSearchModal && currentProject && (
+            <SearchProjectModal
+              project={currentProject}
+              onClose={() => setShowSearchModal(false)}
+              onOpenFile={handleOpenFile}
+            />
+          )}
+
+          {/* Project Actions Context Modal */}
+          {showActionsModal && selectedActionProject && (
+            <ProjectActionsModal
+              project={selectedActionProject}
+              onClose={() => setShowActionsModal(false)}
+              onOpen={() => {
+                setActiveProjectId(selectedActionProject.id);
+                navigateTo('project_files');
+              }}
+              onRename={() => {
+                setRenameProjectName(selectedActionProject.name);
+                setShowRenameModal(true);
+              }}
+              onDuplicate={() => handleDuplicateProject(selectedActionProject)}
+              onDelete={() => handleDeleteProject(selectedActionProject)}
+              onSettings={() => {
+                setActiveProjectId(selectedActionProject.id);
+                navigateTo('project_settings');
+              }}
+              onInfo={() => {
+                setActiveProjectId(selectedActionProject.id);
+                setShowInfoModal(true);
+              }}
+              onShare={() => {
+                setActiveProjectId(selectedActionProject.id);
+                setShowPublishModal(true);
+              }}
+            />
+          )}
+
+          {/* Rename Project Dialog */}
+          {showRenameModal && selectedActionProject && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+              <div className="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl space-y-3">
+                <h3 className="text-sm font-bold text-white">Rename Project</h3>
+                <input
+                  type="text"
+                  autoFocus
+                  value={renameProjectName}
+                  onChange={(e) => setRenameProjectName(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => setShowRenameModal(false)}
+                    className="text-xs text-slate-400 hover:text-white px-3 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRenameProjectSubmit}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
-    </AndroidFrame>
+      </AndroidFrame>
+    </>
   );
 }
