@@ -7,21 +7,10 @@ interface AndroidFrameProps {
   isLandscape?: boolean;
 }
 
-export const AndroidFrame: React.FC<AndroidFrameProps> = ({
-  children,
-}) => {
+export const AndroidFrame: React.FC<AndroidFrameProps> = ({ children }) => {
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-slate-900">
-      <main
-        className="
-          mx-auto
-          min-h-screen
-          w-full
-          max-w-[430px]
-          overflow-x-hidden
-          bg-slate-900
-        "
-      >
+    <div className="w-full min-h-screen overflow-x-hidden bg-slate-900">
+      <main className="w-full min-h-screen overflow-x-hidden bg-slate-900">
         {children}
       </main>
     </div>
