@@ -1,0 +1,6 @@
+{
+  "name": "Apd Web",
+  "description": "All-in-One Web Development on Your Android Device",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
