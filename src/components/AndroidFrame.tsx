@@ -11,10 +11,10 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   children,
 }) => {
   return (
-    <div className="min-h-screen w-full bg-slate-900 text-slate-100 overflow-x-hidden">
-      <div className="min-h-screen w-full bg-slate-900">
+    <div className="min-h-screen w-full bg-slate-900 flex justify-center overflow-x-hidden">
+      <main className="w-full max-w-[430px] min-h-screen bg-slate-900 overflow-x-hidden">
         {children}
-      </div>
+      </main>
     </div>
   );
 };
