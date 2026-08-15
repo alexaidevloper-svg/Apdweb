@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, ProjectFile, ProjectSettings, ScreenView } from './types';
 import { loadProjects, saveProjects } from './utils/storage';
 import { AndroidFrame } from './components/AndroidFrame';
@@ -26,53 +26,39 @@ export default function App() {
   const [viewHistory, setViewHistory] = useState<ScreenView[]>(['home']);
   const [homeTab, setHomeTab] = useState<'home' | 'feedy'>('home');
 
-  // Modals state - ALL CLOSE FIXED
-  const [modalState, setModalState] = useState({
-    create: false,
-    publish: false,
-    import: false,
-    export: false,
-    info: false,
-    search: false,
-    actions: false,
-    rename: false,
-  });
-
+  // Modals state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showActionsModal, setShowActionsModal] = useState(false);
   const [selectedActionProject, setSelectedActionProject] = useState<Project | null>(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameProjectName, setRenameProjectName] = useState('');
 
-  // Memoized current project for performance
-  const currentProject = useMemo(() => 
-    projects.find((p) => p.id === activeProjectId) || projects[0],
-    [projects, activeProjectId]
-  );
-
-  const currentFile = useMemo(() => 
-    currentProject?.files.find((f) => f.id === activeFileId) || currentProject?.files[0],
-    [currentProject, activeFileId]
-  );
-
-  // Initial load - only once
+  // Initial load
   useEffect(() => {
     const loaded = loadProjects();
-    if (loaded.length > 0) {
-      setProjects(loaded);
-    }
+    setProjects(loaded);
   }, []);
 
-  // Sync projects to storage - with debounce to prevent loop
-  const updateProjects = useCallback((newProjects: Project[]) => {
+  // Sync projects to storage
+  const updateProjects = (newProjects: Project[]) => {
     setProjects(newProjects);
     saveProjects(newProjects);
-  }, []);
+  };
 
-  // Navigation functions - memoized
-  const navigateTo = useCallback((view: ScreenView) => {
+  const currentProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  const currentFile = currentProject?.files.find((f) => f.id === activeFileId) || currentProject?.files[0];
+
+  const navigateTo = (view: ScreenView) => {
     setViewHistory((prev) => [...prev, view]);
     setCurrentView(view);
-  }, []);
+  };
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     if (viewHistory.length > 1) {
       const newHistory = [...viewHistory];
       newHistory.pop();
@@ -82,24 +68,15 @@ export default function App() {
     } else {
       setCurrentView('home');
     }
-  }, [viewHistory]);
+  };
 
-  const handleHomePress = useCallback(() => {
+  const handleHomePress = () => {
     setViewHistory(['home']);
     setCurrentView('home');
-  }, []);
-
-  // Modal close functions - FIXED
-  const closeModal = useCallback((modalName: keyof typeof modalState) => {
-    setModalState(prev => ({ ...prev, [modalName]: false }));
-  }, []);
-
-  const openModal = useCallback((modalName: keyof typeof modalState) => {
-    setModalState(prev => ({ ...prev, [modalName]: true }));
-  }, []);
+  };
 
   // Project Management Actions
-  const handleCreateProject = useCallback((name: string, icon: string, template: string) => {
+  const handleCreateProject = (name: string, icon: string, template: string) => {
     const newProj: Project = {
       id: 'proj-' + Date.now(),
       name,
@@ -177,23 +154,24 @@ export default function App() {
       ],
     };
 
-    updateProjects([newProj, ...projects]);
+    const updated = [newProj, ...projects];
+    updateProjects(updated);
     setActiveProjectId(newProj.id);
-    closeModal('create');
+    setShowCreateModal(false);
     navigateTo('project_files');
-  }, [projects, updateProjects, closeModal, navigateTo]);
+  };
 
-  const handleSelectProject = useCallback((project: Project) => {
+  const handleSelectProject = (project: Project) => {
     setActiveProjectId(project.id);
     navigateTo('project_files');
-  }, [navigateTo]);
+  };
 
-  const handleOpenFile = useCallback((file: ProjectFile) => {
+  const handleOpenFile = (file: ProjectFile) => {
     setActiveFileId(file.id);
     navigateTo('editor');
-  }, [navigateTo]);
+  };
 
-  const handleSaveFileContent = useCallback((newContent: string) => {
+  const handleSaveFileContent = (newContent: string) => {
     if (!currentProject || !currentFile) return;
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
@@ -213,9 +191,9 @@ export default function App() {
       p.id === currentProject.id ? updatedProject : p
     );
     updateProjects(updatedProjects);
-  }, [currentProject, currentFile, projects, updateProjects]);
+  };
 
-  const handleCreateFileInProject = useCallback((
+  const handleCreateFileInProject = (
     name: string,
     type: ProjectFile['type'],
     initialContent?: string
@@ -243,9 +221,9 @@ export default function App() {
       p.id === currentProject.id ? updatedProject : p
     );
     updateProjects(updatedProjects);
-  }, [currentProject, projects, updateProjects]);
+  };
 
-  const handleDeleteFile = useCallback((fileId: string) => {
+  const handleDeleteFile = (fileId: string) => {
     if (!currentProject) return;
     const updatedFiles = currentProject.files.filter((f) => f.id !== fileId);
     const updatedProject = { ...currentProject, files: updatedFiles };
@@ -253,9 +231,9 @@ export default function App() {
       p.id === currentProject.id ? updatedProject : p
     );
     updateProjects(updatedProjects);
-  }, [currentProject, projects, updateProjects]);
+  };
 
-  const handleRenameFile = useCallback((fileId: string, newName: string) => {
+  const handleRenameFile = (fileId: string, newName: string) => {
     if (!currentProject) return;
     const updatedFiles = currentProject.files.map((f) =>
       f.id === fileId ? { ...f, name: newName } : f
@@ -265,18 +243,18 @@ export default function App() {
       p.id === currentProject.id ? updatedProject : p
     );
     updateProjects(updatedProjects);
-  }, [currentProject, projects, updateProjects]);
+  };
 
-  const handleUpdateSettings = useCallback((newSettings: ProjectSettings) => {
+  const handleUpdateSettings = (newSettings: ProjectSettings) => {
     if (!currentProject) return;
     const updatedProject = { ...currentProject, settings: newSettings };
     const updatedProjects = projects.map((p) =>
       p.id === currentProject.id ? updatedProject : p
     );
     updateProjects(updatedProjects);
-  }, [currentProject, projects, updateProjects]);
+  };
 
-  const handleDuplicateProject = useCallback((project: Project) => {
+  const handleDuplicateProject = (project: Project) => {
     const dup: Project = {
       ...project,
       id: 'proj-' + Date.now(),
@@ -286,31 +264,29 @@ export default function App() {
       files: project.files.map((f) => ({ ...f, id: 'file-' + Date.now() + Math.random() })),
     };
     updateProjects([dup, ...projects]);
-    closeModal('actions');
-  }, [projects, updateProjects, closeModal]);
+  };
 
-  const handleDeleteProject = useCallback((project: Project) => {
-    if (window.confirm(`Delete project "${project.name}" permanently?`)) {
+  const handleDeleteProject = (project: Project) => {
+    if (confirm(`Delete project "${project.name}" permanently?`)) {
       const filtered = projects.filter((p) => p.id !== project.id);
       updateProjects(filtered);
       if (activeProjectId === project.id) {
         setActiveProjectId(null);
         setCurrentView('home');
       }
-      closeModal('actions');
     }
-  }, [projects, updateProjects, activeProjectId, closeModal]);
+  };
 
-  const handleRenameProjectSubmit = useCallback(() => {
+  const handleRenameProjectSubmit = () => {
     if (!selectedActionProject || !renameProjectName.trim()) return;
     const updated = projects.map((p) =>
       p.id === selectedActionProject.id ? { ...p, name: renameProjectName.trim() } : p
     );
     updateProjects(updated);
-    closeModal('rename');
-  }, [selectedActionProject, renameProjectName, projects, updateProjects, closeModal]);
+    setShowRenameModal(false);
+  };
 
-  const handleImportProject = useCallback((name: string, files: ProjectFile[]) => {
+  const handleImportProject = (name: string, files: ProjectFile[]) => {
     const newProj: Project = {
       id: 'proj-imp-' + Date.now(),
       name,
@@ -353,9 +329,8 @@ export default function App() {
     };
     updateProjects([newProj, ...projects]);
     setActiveProjectId(newProj.id);
-    closeModal('import');
     navigateTo('project_files');
-  }, [projects, updateProjects, closeModal, navigateTo]);
+  };
 
   return (
     <AndroidFrame
@@ -368,10 +343,10 @@ export default function App() {
         <HomeScreen
           projects={projects}
           onSelectProject={handleSelectProject}
-          onCreateProjectClick={() => openModal('create')}
+          onCreateProjectClick={() => setShowCreateModal(true)}
           onProjectActionsClick={(proj) => {
             setSelectedActionProject(proj);
-            openModal('actions');
+            setShowActionsModal(true);
           }}
           onOpenSettings={() => {
             if (currentProject) navigateTo('project_settings');
@@ -388,13 +363,13 @@ export default function App() {
           onBack={handleBack}
           onOpenFile={handleOpenFile}
           onOpenPhpServer={() => navigateTo('php_server')}
-          onOpenPublish={() => openModal('publish')}
-          onOpenSearch={() => openModal('search')}
+          onOpenPublish={() => setShowPublishModal(true)}
+          onOpenSearch={() => setShowSearchModal(true)}
           onOpenSettings={() => navigateTo('project_settings')}
-          onOpenInfo={() => openModal('info')}
+          onOpenInfo={() => setShowInfoModal(true)}
           onOpenActions={() => {
             setSelectedActionProject(currentProject);
-            openModal('actions');
+            setShowActionsModal(true);
           }}
           onCreateFile={handleCreateFileInProject}
           onDeleteFile={handleDeleteFile}
@@ -455,91 +430,94 @@ export default function App() {
         />
       )}
 
-      {/* MODALS - All with proper close */}
-      {modalState.create && (
+      {/* MODALS */}
+      {/* Create Project Modal (Screen 2) */}
+      {showCreateModal && (
         <CreateProjectDialog
-          onClose={() => closeModal('create')}
+          onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateProject}
           onImportClick={() => {
-            closeModal('create');
-            openModal('import');
+            setShowCreateModal(false);
+            setShowImportModal(true);
           }}
         />
       )}
 
-      {modalState.publish && currentProject && (
+      {/* Publish & APK Build Modal (Screens 11, 12, 13, 14, 15) */}
+      {showPublishModal && currentProject && (
         <PublishModal
           project={currentProject}
-          onClose={() => closeModal('publish')}
+          onClose={() => setShowPublishModal(false)}
         />
       )}
 
-      {modalState.import && (
+      {/* Import Modal (Screen 16) */}
+      {showImportModal && (
         <ImportModal
-          onClose={() => closeModal('import')}
+          onClose={() => setShowImportModal(false)}
           onImport={handleImportProject}
         />
       )}
 
-      {modalState.export && currentProject && (
+      {/* Export Modal (Screen 17) */}
+      {showExportModal && currentProject && (
         <ExportModal
           project={currentProject}
-          onClose={() => closeModal('export')}
+          onClose={() => setShowExportModal(false)}
         />
       )}
 
-      {modalState.info && currentProject && (
+      {/* Project Info Modal (Screen 18) */}
+      {showInfoModal && currentProject && (
         <ProjectInfoModal
           project={currentProject}
-          onClose={() => closeModal('info')}
+          onClose={() => setShowInfoModal(false)}
         />
       )}
 
-      {modalState.search && currentProject && (
+      {/* Search in Project Modal (Screen 19) */}
+      {showSearchModal && currentProject && (
         <SearchProjectModal
           project={currentProject}
-          onClose={() => closeModal('search')}
+          onClose={() => setShowSearchModal(false)}
           onOpenFile={handleOpenFile}
         />
       )}
 
-      {modalState.actions && selectedActionProject && (
+      {/* Project Actions Context Modal (Screen 20) */}
+      {showActionsModal && selectedActionProject && (
         <ProjectActionsModal
           project={selectedActionProject}
-          onClose={() => closeModal('actions')}
+          onClose={() => setShowActionsModal(false)}
           onOpen={() => {
             setActiveProjectId(selectedActionProject.id);
-            closeModal('actions');
             navigateTo('project_files');
           }}
           onRename={() => {
             setRenameProjectName(selectedActionProject.name);
-            closeModal('actions');
-            openModal('rename');
+            setShowRenameModal(true);
           }}
           onDuplicate={() => handleDuplicateProject(selectedActionProject)}
           onDelete={() => handleDeleteProject(selectedActionProject)}
           onSettings={() => {
             setActiveProjectId(selectedActionProject.id);
-            closeModal('actions');
             navigateTo('project_settings');
           }}
           onInfo={() => {
             setActiveProjectId(selectedActionProject.id);
-            closeModal('actions');
-            openModal('info');
+            setShowInfoModal(true);
           }}
           onShare={() => {
             setActiveProjectId(selectedActionProject.id);
-            closeModal('actions');
-            openModal('publish');
+            setShowPublishModal(true);
           }}
         />
       )}
 
-      {modalState.rename && selectedActionProject && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => closeModal('rename')}>
-          <div className="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl space-y-3" onClick={(e) => e.stopPropagation()}>
+      {/* Rename Project Dialog */}
+      {showRenameModal && selectedActionProject && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl space-y-3">
             <h3 className="text-sm font-bold text-white">Rename Project</h3>
             <input
               type="text"
@@ -547,14 +525,10 @@ export default function App() {
               value={renameProjectName}
               onChange={(e) => setRenameProjectName(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameProjectSubmit();
-                if (e.key === 'Escape') closeModal('rename');
-              }}
             />
             <div className="flex justify-end gap-2 pt-1">
               <button
-                onClick={() => closeModal('rename')}
+                onClick={() => setShowRenameModal(false)}
                 className="text-xs text-slate-400 hover:text-white px-3 py-1.5"
               >
                 Cancel
